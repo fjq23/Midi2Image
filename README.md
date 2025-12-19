@@ -15,6 +15,16 @@ python web_app.py
 
 Recommended browser: Chrome / Edge (Web MIDI required).
 
+## No Domain? Use HTTPS Forwarding (Web MIDI on Public IP)
+
+Web MIDI is blocked on plain HTTP for public IPs. If you don’t have a domain/certificate yet, you can forward your server’s `http://127.0.0.1:8012` to a public **HTTPS** URL using Cloudflare Quick Tunnel:
+
+```bash
+./scripts/cloudflare_https_forward.sh
+```
+
+It prints a `https://xxxx.trycloudflare.com` URL. Open that URL in Chrome/Edge to use MIDI.
+
 ## Template Share Card (`assets/template.png`)
 
 The server renders a final share card image using `assets/template.png`:

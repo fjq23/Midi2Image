@@ -485,16 +485,16 @@
 
       if (command === 0x90 && velocity > 0) {
         await ensureAudio();
-        const freq = Tone.Frequency(note, "midi").toFrequency();
-        synth.triggerAttack(freq, undefined, velocity / 127);
+        const noteName = Tone.Frequency(note, "midi").toNote();
+        synth.triggerAttack(noteName, undefined, velocity / 127);
         startDrop(note, velocity);
         if (recording) {
           events.push({ type: "note_on", note, velocity, time: nowSeconds() - startTime });
         }
       } else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
         await ensureAudio();
-        const freq = Tone.Frequency(note, "midi").toFrequency();
-        synth.triggerRelease(freq);
+        const noteName = Tone.Frequency(note, "midi").toNote();
+        synth.triggerRelease(noteName);
         if (recording) {
           events.push({ type: "note_off", note, velocity, time: nowSeconds() - startTime });
         }
@@ -502,6 +502,11 @@
     }
 
     async function connectMidi() {
+      if (typeof navigator.requestMIDIAccess !== "function") {
+        log("Web MIDI 不可用：需要 HTTPS 或 http://localhost 才能访问 MIDI 设备。");
+        midiInfo.textContent = "Web MIDI 不可用：请使用 HTTPS（推荐域名 + 证书），或在本机用 http://localhost 访问。";
+        return;
+      }
       try {
         midiAccess = await navigator.requestMIDIAccess();
         const inputs = Array.from(midiAccess.inputs.values());
@@ -517,7 +522,7 @@
         log(`MIDI connected: ${midiInput.name}`);
       } catch (err) {
         console.error(err);
-        midiInfo.textContent = "浏览器不支持 Web MIDI，建议使用 Chrome 系列。";
+        midiInfo.textContent = "MIDI 连接失败：请确认浏览器支持 Web MIDI（Chrome/Edge）且使用 HTTPS（或 localhost）。";
         log("MIDI connect failed: " + err.message);
       }
     }
