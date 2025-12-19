@@ -11,6 +11,8 @@ Then open http://localhost:8012 in a browser.
 import base64
 import io
 import json
+import os
+import secrets
 import time
 import traceback
 from http import HTTPStatus
@@ -35,6 +37,7 @@ PROMPTS_DIR = DATA_DIR / "prompts"
 IMAGE_DIR = DATA_DIR / "image"
 TEMPLATE_FILE = ROOT / "assets" / "template.png"
 CARDS_DIR = OUTPUT_DIR / "cards"
+SHARES_FILE = DATA_DIR / "shares.json"
 
 
 def _ensure_dirs() -> None:
@@ -49,6 +52,22 @@ def _ensure_dirs() -> None:
         TEMPLATE_FILE.parent,
     ):
         folder.mkdir(parents=True, exist_ok=True)
+
+    if not SHARES_FILE.exists():
+        SHARES_FILE.write_text("{}", encoding="utf-8")
+
+
+def _load_shares() -> Dict[str, Dict[str, str]]:
+    try:
+        return json.loads(SHARES_FILE.read_text(encoding="utf-8") or "{}")
+    except Exception:
+        return {}
+
+
+def _save_shares(data: Dict[str, Dict[str, str]]) -> None:
+    tmp = SHARES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, SHARES_FILE)
 
 
 def save_midi_from_events(events: List[Dict[str, Any]], bpm: int = 120) -> Path:
@@ -182,6 +201,8 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.handle_upload_audio(payload)
         elif self.path == "/api/render-share-card":
             self.handle_render_share_card(payload)
+        elif self.path == "/api/create-share":
+            self.handle_create_share(payload)
         else:
             self._send_json({"ok": False, "error": "Unknown endpoint"}, status=404)
 
@@ -198,9 +219,18 @@ class AppHandler(SimpleHTTPRequestHandler):
     def handle_share_page(self) -> None:
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
-        mp3 = (qs.get("mp3") or [""])[0]
-        timeline = (qs.get("timeline") or [""])[0]
-        ai = (qs.get("ai") or [""])[0]
+        share_id = (qs.get("id") or [""])[0].strip()
+
+        if share_id:
+            shares = _load_shares()
+            entry = shares.get(share_id, {})
+            mp3 = entry.get("mp3", "")
+            timeline = entry.get("timeline", "")
+            ai = entry.get("ai", "")
+        else:
+            mp3 = (qs.get("mp3") or [""])[0]
+            timeline = (qs.get("timeline") or [""])[0]
+            ai = (qs.get("ai") or [""])[0]
 
         def link_block(label: str, href: str) -> str:
             if not href:
@@ -249,6 +279,31 @@ class AppHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def handle_create_share(self, payload: Dict[str, Any]) -> None:
+        mp3 = str(payload.get("mp3_path", "")).strip()
+        timeline = str(payload.get("timeline_path", "")).strip()
+        ai = str(payload.get("ai_path", "")).strip()
+
+        if not mp3 or not timeline or not ai:
+            self._send_json({"ok": False, "error": "mp3_path, timeline_path and ai_path are required"}, status=400)
+            return
+
+        # Validate paths are within ROOT.
+        try:
+            self._safe_resolve(mp3)
+            self._safe_resolve(timeline)
+            self._safe_resolve(ai)
+        except Exception as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=400)
+            return
+
+        shares = _load_shares()
+        share_id = secrets.token_urlsafe(8)
+        shares[share_id] = {"mp3": "/" + mp3.lstrip("/"), "timeline": "/" + timeline.lstrip("/"), "ai": "/" + ai.lstrip("/")}
+        _save_shares(shares)
+
+        self._send_json({"ok": True, "id": share_id, "share_path": f"/share?id={share_id}"})
 
     def handle_save_midi(self, payload: Dict[str, Any]) -> None:
         try:
@@ -398,7 +453,15 @@ class AppHandler(SimpleHTTPRequestHandler):
         qr_box = (236, 364, 404, 527)
         resampling = getattr(Image, "Resampling", Image)
         paste_contain(base, ai_img, ai_box, resample=getattr(resampling, "LANCZOS", Image.LANCZOS))
-        paste_contain(base, qr_img, qr_box, resample=getattr(resampling, "NEAREST", Image.NEAREST))
+        # QR: avoid non-integer scaling (hurts scanning). If it fits, paste 1:1 centered.
+        x1, y1, x2, y2 = qr_box
+        bw, bh = max(1, x2 - x1), max(1, y2 - y1)
+        if qr_img.width <= bw and qr_img.height <= bh:
+            px = x1 + (bw - qr_img.width) // 2
+            py = y1 + (bh - qr_img.height) // 2
+            base.paste(qr_img, (px, py), qr_img)
+        else:
+            paste_contain(base, qr_img, qr_box, resample=getattr(resampling, "NEAREST", Image.NEAREST))
 
         timestamp = int(time.time() * 1000)
         out_path = CARDS_DIR / f"share_card_{timestamp}.png"
