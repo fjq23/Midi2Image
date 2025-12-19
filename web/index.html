@@ -904,8 +904,8 @@
       const shareUrl = location.origin + sharePath;
       shareStatus.textContent = "生成分享卡片中...";
       try {
-        // Generate a smaller QR to fit the template slot; keep it 1:1 pasted on server.
-        const qrDataUrl = await generateQrDataUrl(shareUrl, 160);
+        // Generate QR close to the slot size, then paste 1:1 on server to keep it sharp and easy to scan.
+        const qrDataUrl = await generateQrDataUrl(shareUrl, 600);
         const resp = await fetch("/api/render-share-card", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

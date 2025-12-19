@@ -25,11 +25,15 @@ Web MIDI is blocked on plain HTTP for public IPs. If you don’t have a domain/c
 
 It prints a `https://xxxx.trycloudflare.com` URL. Open that URL in Chrome/Edge to use MIDI.
 
-## Template Share Card (`assets/template.png`)
+## Template Share Card
 
-The server renders a final share card image using `assets/template.png`:
-- AI image is placed into rectangle `(x1,y1,x2,y2) = (463,58,1245,661)`
-- QR code (links to a download page with MP3/timeline/AI image) is placed into `(236,364,404,527)`
+This repo contains **two** template images:
+- `template.png` (root): the **actual rendering template** used by the server
+- `assets/template.png`: **README preview/demo** only
+
+The server renders a final share card image using `template.png`:
+- AI image is placed into rectangle `(x1,y1,x2,y2) = (776,38,2773,1577)`
+- QR code (links to a download page with MP3/timeline/AI image) is placed into `(49,1310,723,1961)`
 
 The rendered share card is saved under `data/output/cards/` and the web page shows a QR code that downloads this card image.
 
@@ -95,6 +99,7 @@ Create `.dashscope_config.json` in the project root:
 .
 ├── assets/
 │   └── template.png
+├── template.png           (rendering template)
 ├── web/
 │   ├── index.html
 │   └── qrcode.min.js

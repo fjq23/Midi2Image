@@ -35,7 +35,8 @@ FILES_DIR = DATA_DIR / "files"
 OUTPUT_DIR = DATA_DIR / "output"
 PROMPTS_DIR = DATA_DIR / "prompts"
 IMAGE_DIR = DATA_DIR / "image"
-TEMPLATE_FILE = ROOT / "assets" / "template.png"
+# Rendering template (production). `assets/template.png` is only for README preview.
+TEMPLATE_FILE = ROOT / "template.png"
 CARDS_DIR = OUTPUT_DIR / "cards"
 SHARES_FILE = DATA_DIR / "shares.json"
 
@@ -449,8 +450,8 @@ class AppHandler(SimpleHTTPRequestHandler):
             self._send_json({"ok": False, "error": str(exc)}, status=500)
             return
 
-        ai_box = (463, 58, 1245, 661)
-        qr_box = (236, 364, 404, 527)
+        ai_box = (776, 38, 2773, 1577)
+        qr_box = (49, 1310, 723, 1961)
         resampling = getattr(Image, "Resampling", Image)
         paste_contain(base, ai_img, ai_box, resample=getattr(resampling, "LANCZOS", Image.LANCZOS))
         # QR: avoid non-integer scaling (hurts scanning). If it fits, paste 1:1 centered.
