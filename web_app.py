@@ -5,7 +5,7 @@ MIDI file, visualize it, and call the DashScope image API in one place.
 Usage:
     python web_app.py
 
-Then open http://localhost:8000 in a browser.
+Then open http://localhost:8012 in a browser.
 """
 
 import base64
@@ -27,17 +27,27 @@ import midi_to_prompt
 import run as qwen_client
 
 ROOT = Path(__file__).parent.resolve()
-FILES_DIR = ROOT / "files"
-OUTPUT_DIR = ROOT / "output"
-PROMPTS_DIR = ROOT / "prompts"
-IMAGE_DIR = ROOT / "image"
 INDEX_FILE = ROOT / "web" / "index.html"
-TEMPLATE_FILE = ROOT / "template.png"
+DATA_DIR = ROOT / "data"
+FILES_DIR = DATA_DIR / "files"
+OUTPUT_DIR = DATA_DIR / "output"
+PROMPTS_DIR = DATA_DIR / "prompts"
+IMAGE_DIR = DATA_DIR / "image"
+TEMPLATE_FILE = ROOT / "assets" / "template.png"
 CARDS_DIR = OUTPUT_DIR / "cards"
 
 
 def _ensure_dirs() -> None:
-    for folder in (FILES_DIR, OUTPUT_DIR, PROMPTS_DIR, IMAGE_DIR, INDEX_FILE.parent, CARDS_DIR):
+    for folder in (
+        DATA_DIR,
+        FILES_DIR,
+        OUTPUT_DIR,
+        PROMPTS_DIR,
+        IMAGE_DIR,
+        INDEX_FILE.parent,
+        CARDS_DIR,
+        TEMPLATE_FILE.parent,
+    ):
         folder.mkdir(parents=True, exist_ok=True)
 
 
@@ -400,7 +410,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         self._send_json({"ok": True, "card_path": str(out_path.relative_to(ROOT))})
 
 
-def run(host: str = "0.0.0.0", port: int = 8000) -> None:
+def run(host: str = "0.0.0.0", port: int = 8012) -> None:
     _ensure_dirs()
     handler = lambda *args, **kwargs: AppHandler(*args, directory=str(ROOT), **kwargs)
     server = ThreadingHTTPServer((host, port), handler)

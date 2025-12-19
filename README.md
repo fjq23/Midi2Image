@@ -1,43 +1,50 @@
-# MIDI to Image Converter
+# midi2image (Winter Solstice Web Demo)
 
-This project converts MIDI files to images in two ways:
+A browser-based MIDI booth app:
+- Plug in a MIDI keyboard, play in the browser with piano sound + visuals
+- Record → generate a low-res timeline color-block image (4:3) + prompt
+- Call DashScope `qwen-image-plus` to generate the final AI image (default 4:3)
+- Generate a share card based on `assets/template.png` (AI image + QR), then scan to download
 
-1. **Local MIDI Visualization** (`midi_to_image.py`): Converts MIDI notes to colorful square images without external APIs
-2. **AI Image Generation** (`run.py`): Uses Alibaba Cloud DashScope `qwen-image-plus` API to generate an image from the prompt
-
-## New: Browser MIDI Studio (Web)
-
-Record directly from a browser, see falling-note visuals, save MIDI, auto-generate the timing image and prompt, and call DashScope to “化乐为图”.
+## Run (Web App)
 
 ```bash
 python web_app.py
-# visit http://localhost:8000
+# visit http://localhost:8012
 ```
 
-What it does:
-- Connect Web MIDI (Chrome/Edge recommended), play to hear a built-in synth with falling-note animation.
-- One click to record; the server saves `files/<timestamp>.mid` and auto builds `output/<timestamp>.png` and `prompts/<timestamp>.txt`.
-- Browser captures audio and offers an MP3 download.
-- “化乐为图” calls DashScope `qwen-image-plus` (requires `DASHSCOPE_API_KEY` or `.dashscope_config.json`) and saves the image under `image/`.
+Recommended browser: Chrome / Edge (Web MIDI required).
+
+## Template Share Card (`assets/template.png`)
+
+The server renders a final share card image using `assets/template.png`:
+- AI image is placed into rectangle `(x1,y1,x2,y2) = (463,58,1245,661)`
+- QR code (links to a download page with MP3/timeline/AI image) is placed into `(236,364,404,527)`
+
+The rendered share card is saved under `data/output/cards/` and the web page shows a QR code that downloads this card image.
+
+Preview:
+
+![template](assets/template.png)
 
 ## Quick Start
 
-### 1. Local MIDI Visualization
+### 1) Local MIDI Visualization
 ```bash
 # Convert a MIDI file to image
-python midi_to_image.py files/recording_20251207_231145.mid
+python midi_to_image.py data/files/your.mid
 
 # With custom pixels per second
-python midi_to_image.py files/recording_20251207_231145.mid --pps 100
+python midi_to_image.py data/files/your.mid --pps 100
 ```
 
-### 2. AI Image Generation (Requires API Key)
+### 2) AI Image Generation (Requires API Key)
 ```bash
 # Generate image from an existing prompt txt file
-python run.py prompts/recording_20251207_231145.txt
+python run.py data/prompts/your.txt
 
-# Optional: choose size (default: 1664*928)
-python run.py prompts/recording_20251207_231145.txt --size 1328*1328
+# Optional: choose size (default: 1472*1140, 4:3)
+python run.py data/prompts/your.txt --size 1328*1328
 ```
 
 ## API Key Setup
@@ -74,12 +81,38 @@ Create `.dashscope_config.json` in the project root:
 
 ## Project Structure
 
-- `main.py` - MIDI recording and parsing utility
-- `midi_parser.py` - MIDI file parsing utilities
-- `midi_to_image.py` - Local MIDI visualization (no API needed)
-- `run.py` - AI image generation with DashScope `qwen-image-plus` API
-- `files/` - Directory for recorded MIDI files
-- `output/` - Directory for generated images
+```text
+.
+├── assets/
+│   └── template.png
+├── web/
+│   ├── index.html
+│   └── qrcode.min.js
+├── data/                 (runtime, ignored by git)
+│   ├── files/
+│   ├── output/
+│   │   └── cards/
+│   ├── prompts/
+│   └── image/
+├── web_app.py
+├── midi_to_image.py
+├── midi_to_prompt.py
+└── run.py
+```
+
+Key files:
+- `web_app.py` - Web server + JSON APIs (default port 8012)
+- `web/index.html` - Frontend UI (stage flow + share QR)
+- `run.py` - DashScope `qwen-image-plus` client
+- `midi_to_image.py` - MIDI → low-res timeline image (4:3)
+- `midi_to_prompt.py` - MIDI → prompt (sanitized to reduce API filter issues)
+- `assets/template.png` - Share card template
+
+Runtime data (ignored by git):
+- `data/files/` - Recorded MIDI + uploaded MP3
+- `data/output/` - Timeline images + share cards
+- `data/prompts/` - Prompt txt files
+- `data/image/` - AI generated images
 
 ## Troubleshooting
 

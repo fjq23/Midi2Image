@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+
+# Local secrets
+.dashscope_config.json
+
+# Generated outputs
+files/
+output/
+image/
+prompts/
+data/
