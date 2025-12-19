@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>冬至 · 化乐为图</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Noto+Sans+SC:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/tone@15.0.4/build/Tone.js"></script>
+  <script src="https://unpkg.com/lamejs@1.2.0/lame.min.js"></script>
+  <script src="/web/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: radial-gradient(circle at 15% 20%, rgba(107, 182, 255, 0.16), transparent 32%),
+            radial-gradient(circle at 80% 0%, rgba(141, 206, 255, 0.18), transparent 35%),
+            linear-gradient(145deg, #f7fbff 0%, #e9f3ff 50%, #dbe9ff 100%);
+      --panel: rgba(255, 255, 255, 0.78);
+      --glass: rgba(255, 255, 255, 0.38);
+      --accent: #2c73ff;
+      --accent-2: #5cb7ff;
+      --text: #0f1f3a;
+      --muted: #4b5c7a;
+      --border: rgba(26, 76, 178, 0.15);
+      --shadow: 0 18px 48px rgba(41, 88, 166, 0.25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    .noise {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22 viewBox=%220 0 40 40%22%3E%3Cfilter id=%22n%22 x=%220%22 y=%220%22 width=%22100%25%22 height=%22100%25%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%2240%22 height=%2240%22 filter=%22url(%23n)%22 opacity=%220.08%22/%3E%3C/svg%3E');
+      mix-blend-mode: multiply;
+      z-index: 1;
+    }
+    .page {
+      max-width: 1240px;
+      margin: 0 auto 120px;
+      padding: 0 24px;
+      position: relative;
+      z-index: 2;
+    }
+    header.hero {
+      min-height: 72vh;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      align-items: center;
+      padding: 60px 0 40px;
+    }
+    .hero-copy h1 {
+      font-size: 46px;
+      margin: 0 0 12px;
+      letter-spacing: 0.6px;
+      line-height: 1.1;
+    }
+    .hero-copy p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: linear-gradient(120deg, rgba(92, 169, 255, 0.15), rgba(186, 220, 255, 0.2));
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 14px;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+      transition: transform 0.12s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+      box-shadow: 0 12px 26px rgba(41, 88, 166, 0.25);
+    }
+    .btn.primary {
+      background: linear-gradient(135deg, #2c73ff, #5cb7ff);
+      color: #f7fbff;
+      box-shadow: 0 18px 40px rgba(44, 115, 255, 0.28);
+      border-color: rgba(44, 115, 255, 0.4);
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(255,255,255,0.35); }
+    .hero-visual {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      border-radius: 24px;
+      overflow: hidden;
+      background: linear-gradient(160deg, rgba(92, 169, 255, 0.12), rgba(212, 233, 255, 0.4));
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .hero-visual::after {
+      content: "冬至夜 · 化乐为图";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: #113466;
+      background: radial-gradient(circle at 50% 40%, rgba(92, 169, 255, 0.15), transparent 60%),
+                  radial-gradient(circle at 60% 70%, rgba(212, 233, 255, 0.6), transparent 50%);
+      mix-blend-mode: multiply;
+    }
+    section { margin: 40px 0 0; }
+    .section-title { font-size: 26px; letter-spacing: 0.4px; margin: 0 0 14px; }
+    .section-sub { margin: 0 0 12px; color: var(--muted); line-height: 1.6; }
+
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+    .stack { display: grid; gap: 16px; }
+    .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+
+    .glass-block { background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(44, 115, 255, 0.08); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; color: var(--muted); font-size: 12px; }
+    .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(44, 115, 255, 0.4); }
+    .status { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .info { font-size: 13px; color: var(--muted); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .log { font-family: "Space Grotesk", monospace; font-size: 12px; color: var(--muted); background: rgba(0, 0, 0, 0.35); border-radius: 10px; padding: 10px; min-height: 80px; border: 1px solid var(--border); line-height: 1.5; }
+    input, select { width: 100%; border: 1px solid var(--border); background: rgba(0, 0, 0, 0.25); color: var(--text); padding: 10px 12px; border-radius: 12px; outline: none; font-size: 14px; }
+    select { width: auto; min-width: 180px; }
+
+    canvas { width: 100%; height: 260px; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.45)); border-radius: 14px; border: 1px solid var(--border); }
+
+    .stage { position: relative; border-radius: 18px; overflow: hidden; border: 1px solid var(--border); background: rgba(44,115,255,0.05); min-height: 200px; }
+    .stage img { width: 100%; display: block; height: auto; }
+    .stage .vis-layer { filter: saturate(1.1); transition: opacity 0.8s ease; }
+    .stage .magic-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: scale(1.02); filter: blur(6px); transition: opacity 0.8s ease, transform 1s ease, filter 0.9s ease; mask-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,1) 82%); -webkit-mask-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,1) 82%); }
+    .stage .magic-layer.show { opacity: 1; transform: scale(1); filter: blur(0px); }
+
+    .prompt-box { background: rgba(255, 255, 255, 0.03); border: 1px dashed var(--border); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.6; color: var(--text); white-space: pre-wrap; word-break: break-word; min-height: 140px; }
+
+    .download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .download-card { padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .download-card .meta { font-size: 14px; color: var(--muted); }
+    .qr-box { width: 180px; height: 180px; border: 1px solid var(--border); border-radius: 14px; background: rgba(0,0,0,0.2); display: grid; place-items: center; }
+
+    .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .gallery img { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); opacity: 0.85; transition: opacity 0.2s ease; }
+    .gallery img:hover { opacity: 1; }
+    .pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .hidden-stage { display: none; }
+
+    @media (max-width: 900px) {
+      header.hero { grid-template-columns: 1fr; min-height: auto; }
+      .hero-copy h1 { font-size: 34px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <div class="page">
+    <header class="hero" id="welcome">
+      <div class="hero-copy">
+        <h1>冬至 · 化乐为图</h1>
+        <p>把你现场弹的旋律，煮成一碗图像汤圆。连接键盘，录一段，屏幕上立刻落下发光音符，完成后时序图被 AI 夜景覆盖，生成一张可以扫码带走的冬至插画。</p>
+        <div class="hero-tags">
+          <span class="tag">连接 MIDI 键盘</span>
+          <span class="tag">实时弹奏可视化</span>
+          <span class="tag">DashScope qwen-image-plus</span>
+          <span class="tag">二维码分享</span>
+        </div>
+        <div class="hero-actions">
+          <button class="btn primary" onclick="document.getElementById('play').scrollIntoView({behavior:'smooth'});">开始弹奏</button>
+          <button class="btn" onclick="document.getElementById('share').scrollIntoView({behavior:'smooth'});">看看作品</button>
+        </div>
+      </div>
+      <div class="hero-visual"></div>
+    </header>
+
+    <section id="play" data-stage="1">
+      <h2 class="section-title">1. 弹奏 · 发光音符</h2>
+      <p class="section-sub">连接键盘，点击开始录制。按键会化成发光汤圆坠落，声音同时被录下用于分享。</p>
+      <div class="split">
+        <div class="panel stack">
+          <div class="toolbar">
+            <button class="btn" id="connectBtn">连接 MIDI</button>
+            <button class="btn primary" id="recordBtn" disabled>开始录制</button>
+            <button class="btn" id="stopBtn" disabled>停止并保存</button>
+            <span class="chip"><span class="dot" id="statusDot"></span><span id="statusText">待连接</span></span>
+          </div>
+          <div class="status" id="midiInfo">点击“连接 MIDI”后选择你的键盘。录制时音符会坠落呈现。</div>
+          <canvas id="fallCanvas"></canvas>
+          <div class="toolbar" style="margin-top:6px;">
+            <button class="btn" id="downloadMp3Btn" disabled>下载 MP3</button>
+          </div>
+        </div>
+        <div class="panel stack">
+          <div class="glass-block">
+            <div class="chip" style="margin-bottom:8px;"><span class="dot"></span><span>状态</span></div>
+            <div class="info" id="fileInfo">尚未生成 MIDI 文件。</div>
+          </div>
+          <div class="glass-block">
+            <div class="chip" style="margin-bottom:8px;"><span class="dot"></span><span>日志</span></div>
+            <div class="log" id="logBox"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="generate" data-stage="2">
+      <h2 class="section-title">2. 化乐为图 · 扩散覆盖</h2>
+      <p class="section-sub">录制结束会生成时序图，再用 qwen-image-plus 覆盖出冬至夜景插画。你可以选择尺寸，点击「化乐为图」。</p>
+      <div class="split">
+        <div class="panel stack">
+          <div class="stage" id="imageStage">
+            <img id="visImage" class="vis-layer pixelated" alt="时序图" />
+            <img id="magicImage" class="magic-layer" alt="AI 图像" />
+          </div>
+          <div class="toolbar" style="margin-top:10px;">
+            <div class="status">尺寸：</div>
+            <select id="sizeSelect">
+              <option value="1472*1140" selected>1472*1140 (4:3)</option>
+              <option value="1664*928">1664*928 (16:9)</option>
+              <option value="1328*1328">1328*1328 (1:1)</option>
+              <option value="1140*1472">1140*1472 (3:4)</option>
+              <option value="928*1664">928*1664 (9:16)</option>
+            </select>
+            <button class="btn primary" id="magicBtn" disabled>化乐为图</button>
+          </div>
+          <div class="status">点击后会调用 DashScope qwen-image-plus，生成的图片保存在 image/ 目录，并在上方覆盖显示。</div>
+        </div>
+        <div class="panel stack">
+          <div class="glass-block">
+            <div class="chip" style="margin-bottom:8px;"><span class="dot"></span><span>Prompt</span></div>
+            <div id="promptBox" class="prompt-box">等待生成...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="share" data-stage="3">
+      <h2 class="section-title">3. 分享 · 扫码带走</h2>
+      <p class="section-sub">生成后，三件素材：MP3、时序图、AI 成图。扫码或点击下载，送你一张冬至纪念图。</p>
+      <div class="split">
+        <div class="panel stack">
+          <div class="download-grid">
+            <div class="download-card"><div class="meta">录音 MP3</div><button class="btn" id="dlMp3">下载</button></div>
+            <div class="download-card"><div class="meta">时序图</div><button class="btn" id="dlTimeline">下载</button></div>
+            <div class="download-card"><div class="meta">AI 成图</div><button class="btn" id="dlFinal">下载</button></div>
+          </div>
+          <div class="status" id="shareStatus">等待生成后自动填充链接。</div>
+        </div>
+        <div class="panel stack" style="align-items:center;">
+          <div class="qr-box" id="qrBox"><span style="color:var(--muted); font-size:12px;">二维码生成中...</span></div>
+          <div class="status" style="text-align:center;">扫码可下载 MP3 / 时序图 / 最终图</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    const logBox = document.getElementById("logBox");
+    const statusText = document.getElementById("statusText");
+    const statusDot = document.getElementById("statusDot");
+    const midiInfo = document.getElementById("midiInfo");
+    const fileInfo = document.getElementById("fileInfo");
+    const promptBox = document.getElementById("promptBox");
+    const visImage = document.getElementById("visImage");
+    const magicImage = document.getElementById("magicImage");
+    const shareStatus = document.getElementById("shareStatus");
+    const qrBox = document.getElementById("qrBox");
+
+    const connectBtn = document.getElementById("connectBtn");
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const downloadMp3Btn = document.getElementById("downloadMp3Btn");
+    const magicBtn = document.getElementById("magicBtn");
+    const sizeSelect = document.getElementById("sizeSelect");
+
+    const dlMp3 = document.getElementById("dlMp3");
+    const dlTimeline = document.getElementById("dlTimeline");
+    const dlFinal = document.getElementById("dlFinal");
+    const stages = {
+      1: document.querySelector('section[data-stage="1"]'),
+      2: document.querySelector('section[data-stage="2"]'),
+      3: document.querySelector('section[data-stage="3"]'),
+    };
+    let currentStage = 1;
+    let qrLibLoading = false;
+
+    let midiAccess = null;
+    let midiInput = null;
+    let synth, reverb, delay;
+    let mediaDest, recorder;
+    let audioChunks = [];
+    let recordingBlob = null;
+    let mp3Blob = null;
+    let mp3ServerPath = null;
+    let recording = false;
+    let events = [];
+    let startTime = 0;
+    let currentMidiPath = null;
+    let currentVisPath = null;
+    let currentMagicPath = null;
+    let currentCardPath = null;
+    let animationId = null;
+    const drops = [];
+    const canvas = document.getElementById("fallCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function log(msg) {
+      const ts = new Date().toLocaleTimeString();
+      logBox.textContent = `[${ts}] ${msg}\n` + logBox.textContent.slice(0, 2800);
+    }
+
+    function applyStageVisibility() {
+      Object.entries(stages).forEach(([stage, node]) => {
+        if (!node) return;
+        const unlocked = currentStage >= Number(stage);
+        node.classList.toggle("hidden-stage", !unlocked);
+      });
+    }
+
+    function advanceStage(target) {
+      const next = Math.max(currentStage, target);
+      if (next !== currentStage) {
+        currentStage = next;
+        applyStageVisibility();
+      }
+    }
+
+    function checkStageProgress() {
+      if (currentVisPath) advanceStage(2);
+      if (currentMagicPath) advanceStage(3);
+    }
+
+    function ensureQrLib() {
+      if (window.QRCode) return Promise.resolve(true);
+      if (qrLibLoading) return new Promise((resolve) => setTimeout(() => resolve(!!window.QRCode), 400));
+      qrLibLoading = true;
+      return new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "/web/qrcode.min.js"; // local copy, no外网依赖
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.head.appendChild(script);
+      });
+    }
+
+    function setStatus(text, live = false) {
+      statusText.textContent = text;
+      statusDot.style.background = live ? "#ffd28c" : "rgba(255,255,255,0.4)";
+      statusDot.style.boxShadow = live ? "0 0 12px rgba(255,210,140,0.8)" : "none";
+    }
+
+    async function ensureAudio() {
+      await Tone.start();
+      if (!synth) {
+        // Use sampled piano for more realistic tone
+        synth = new Tone.Sampler({
+          urls: {
+            A0: "A0.mp3",
+            C1: "C1.mp3",
+            "D#1": "Ds1.mp3",
+            "F#1": "Fs1.mp3",
+            A1: "A1.mp3",
+            C2: "C2.mp3",
+            "D#2": "Ds2.mp3",
+            "F#2": "Fs2.mp3",
+            A2: "A2.mp3",
+            C3: "C3.mp3",
+            "D#3": "Ds3.mp3",
+            "F#3": "Fs3.mp3",
+            A3: "A3.mp3",
+            C4: "C4.mp3",
+            "D#4": "Ds4.mp3",
+            "F#4": "Fs4.mp3",
+            A4: "A4.mp3",
+            C5: "C5.mp3",
+            "D#5": "Ds5.mp3",
+            "F#5": "Fs5.mp3",
+            A5: "A5.mp3",
+            C6: "C6.mp3",
+            "D#6": "Ds6.mp3",
+            "F#6": "Fs6.mp3",
+            A6: "A6.mp3",
+            C7: "C7.mp3",
+            "D#7": "Ds7.mp3",
+            "F#7": "Fs7.mp3",
+            A7: "A7.mp3",
+            C8: "C8.mp3",
+          },
+          release: 1.2,
+          baseUrl: "https://tonejs.github.io/audio/salamander/",
+        });
+        reverb = new Tone.Reverb({ decay: 2.2, preDelay: 0.08, wet: 0.25 }).toDestination();
+        synth.connect(reverb);
+      }
+      if (!mediaDest) {
+        const ctx = Tone.getContext().rawContext;
+        mediaDest = ctx.createMediaStreamDestination();
+        Tone.Destination.connect(mediaDest);
+      }
+    }
+
+    function noteColor(note) {
+      const names = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+      const base = names[note % 12];
+      const palette = {
+        "C": "#ffd28c", "D": "#8ed7ff", "E": "#f5a66e", "F": "#7ca0ff",
+        "G": "#9efcff", "A": "#ff8a8a", "B": "#6b87ff",
+        "C#": "#ff99ff", "D#": "#dba5ff", "F#": "#c6ff7f", "G#": "#ff9859", "A#": "#9efcff"
+      };
+      return palette[base] || "#9efcff";
+    }
+
+    function midiToX(note, width) {
+      const min = 36, max = 96;
+      const clamped = Math.min(Math.max(note, min), max);
+      const ratio = (clamped - min) / (max - min);
+      return ratio * width;
+    }
+
+    function startDrop(note, velocity) {
+      drops.push({
+        note,
+        y: -10,
+        x: midiToX(note, canvas.width),
+        speed: 1.2 + (velocity / 127) * 3,
+        color: noteColor(note),
+        r: 6 + (velocity / 127) * 8,
+      });
+    }
+
+    function tick() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const drop of drops) {
+        const grd = ctx.createRadialGradient(drop.x, drop.y, 2, drop.x, drop.y, drop.r);
+        grd.addColorStop(0, drop.color);
+        grd.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = grd;
+        ctx.globalAlpha = 0.82;
+        ctx.beginPath();
+        ctx.arc(drop.x, drop.y, drop.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.3;
+        ctx.beginPath();
+        ctx.arc(drop.x, drop.y + drop.r * 1.2, drop.r * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        drop.y += drop.speed;
+      }
+      ctx.restore();
+      for (let i = drops.length - 1; i >= 0; i--) {
+        if (drops[i].y > canvas.height + 40) drops.splice(i, 1);
+      }
+      animationId = requestAnimationFrame(tick);
+    }
+
+    function nowSeconds() { return performance.now() / 1000; }
+
+    async function onMidiMessage(message) {
+      const [status, note, velocity] = message.data;
+      const command = status & 0xf0;
+
+      if (command === 0x90 && velocity > 0) {
+        await ensureAudio();
+        const freq = Tone.Frequency(note, "midi").toFrequency();
+        synth.triggerAttack(freq, undefined, velocity / 127);
+        startDrop(note, velocity);
+        if (recording) {
+          events.push({ type: "note_on", note, velocity, time: nowSeconds() - startTime });
+        }
+      } else if (command === 0x80 || (command === 0x90 && velocity === 0)) {
+        await ensureAudio();
+        const freq = Tone.Frequency(note, "midi").toFrequency();
+        synth.triggerRelease(freq);
+        if (recording) {
+          events.push({ type: "note_off", note, velocity, time: nowSeconds() - startTime });
+        }
+      }
+    }
+
+    async function connectMidi() {
+      try {
+        midiAccess = await navigator.requestMIDIAccess();
+        const inputs = Array.from(midiAccess.inputs.values());
+        if (!inputs.length) {
+          midiInfo.textContent = "未检测到 MIDI 输入，请确认键盘已插入。";
+          return;
+        }
+        midiInput = inputs[0];
+        midiInput.onmidimessage = onMidiMessage;
+        midiInfo.textContent = `已连接：${midiInput.name || "MIDI 输入"}`;
+        setStatus("已连接", true);
+        recordBtn.disabled = false;
+        log(`MIDI connected: ${midiInput.name}`);
+      } catch (err) {
+        console.error(err);
+        midiInfo.textContent = "浏览器不支持 Web MIDI，建议使用 Chrome 系列。";
+        log("MIDI connect failed: " + err.message);
+      }
+    }
+
+    function setupRecorder() {
+      if (!mediaDest) return;
+      recorder = new MediaRecorder(mediaDest.stream);
+      audioChunks = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+      recorder.onstop = async () => {
+        if (!audioChunks.length) {
+          log("未捕获到音频，可能浏览器阻止了录音。");
+          return;
+        }
+        recordingBlob = new Blob(audioChunks, { type: audioChunks[0]?.type || "audio/webm" });
+        const url = URL.createObjectURL(recordingBlob);
+        downloadMp3Btn.disabled = false;
+        downloadMp3Btn.textContent = "生成 MP3 中...";
+        try {
+          mp3Blob = await toMp3(recordingBlob);
+          const mp3Url = URL.createObjectURL(mp3Blob);
+          downloadMp3Btn.textContent = "下载 MP3";
+          downloadMp3Btn.onclick = () => triggerDownload(mp3Url, "midi_recording.mp3");
+          log("MP3 就绪");
+          await uploadMp3(mp3Blob);
+        } catch (err) {
+          log("MP3 转码失败，提供原始录音下载");
+          downloadMp3Btn.textContent = "下载录音";
+          downloadMp3Btn.onclick = () => triggerDownload(url, "midi_recording.webm");
+        }
+      };
+      recorder.start();
+    }
+
+    async function uploadMp3(blob) {
+      if (!blob) return;
+      shareStatus.textContent = "上传 MP3 用于分享...";
+      const base64 = await blobToBase64(blob);
+      try {
+        const resp = await fetch("/api/upload-audio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: base64, filename: "recording.mp3" }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "上传失败");
+        mp3ServerPath = data.path;
+        updateShareLinks().catch(() => {});
+        log("MP3 已上传: " + mp3ServerPath);
+      } catch (err) {
+        log("MP3 上传失败: " + err.message);
+        shareStatus.textContent = "MP3 上传失败，可本地下载。";
+      }
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1] ? reader.result : reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    function triggerDownload(url, filename) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+    }
+
+    async function startRecording() {
+      if (!midiInput) {
+        midiInfo.textContent = "请先连接 MIDI 输入设备。";
+        return;
+      }
+      await ensureAudio();
+      // Reset session outputs for a clean stage flow
+      currentMidiPath = null;
+      currentVisPath = null;
+      currentMagicPath = null;
+      currentCardPath = null;
+      mp3ServerPath = null;
+      currentStage = 1;
+      applyStageVisibility();
+      visImage.src = "";
+      visImage.style.opacity = 1;
+      magicImage.classList.remove("show");
+      magicImage.src = "";
+      promptBox.textContent = "等待生成...";
+      fileInfo.textContent = "尚未生成 MIDI 文件。";
+      updateShareLinks().catch(() => {});
+      events = [];
+      recording = true;
+      startTime = nowSeconds();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+      connectBtn.disabled = true;
+      downloadMp3Btn.disabled = true;
+      setStatus("录制中...", true);
+      log("Recording started");
+      setupRecorder();
+    }
+
+    async function stopRecording() {
+      recording = false;
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+      connectBtn.disabled = false;
+      setStatus("处理中...", true);
+      log("Stopping, sending to server...");
+      if (recorder && recorder.state !== "inactive") {
+        recorder.stop();
+      }
+      await sendMidiToServer();
+      setStatus("完成", true);
+    }
+
+    async function sendMidiToServer() {
+      if (!events.length) {
+        log("没有可保存的 MIDI 事件。");
+        return;
+      }
+      try {
+        const resp = await fetch("/api/save-midi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ events, bpm: 120 }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "未知错误");
+
+        currentMidiPath = data.midi_path;
+        currentVisPath = data.image_path;
+        magicBtn.disabled = false;
+        visImage.src = "/" + data.image_path + "?t=" + Date.now();
+        promptBox.textContent = data.prompt_text || "已生成，但为空。";
+        fileInfo.textContent = `MIDI: ${data.midi_path}\n可视化: ${data.image_path}\nPrompt: ${data.prompt_path}`;
+        updateShareLinks().catch(() => {});
+        log("服务器已保存 MIDI 并生成可视化");
+        advanceStage(2);
+      } catch (err) {
+        log("上传失败: " + err.message);
+      } finally {
+        checkStageProgress();
+      }
+    }
+
+    async function toMp3(blob) {
+      if (!window.lamejs) throw new Error("lamejs 未加载");
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioCtx = new AudioContext();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const channelData = audioBuffer.getChannelData(0);
+
+      const samples = new Int16Array(channelData.length);
+      for (let i = 0; i < channelData.length; i++) {
+        const s = Math.max(-1, Math.min(1, channelData[i]));
+        samples[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+
+      const mp3encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+      const block = 1152;
+      const mp3Data = [];
+      for (let i = 0; i < samples.length; i += block) {
+        const chunk = samples.subarray(i, i + block);
+        const mp3buf = mp3encoder.encodeBuffer(chunk);
+        if (mp3buf.length > 0) mp3Data.push(mp3buf);
+      }
+      const end = mp3encoder.flush();
+      if (end.length > 0) mp3Data.push(end);
+      return new Blob(mp3Data, { type: "audio/mp3" });
+    }
+
+    async function magicImageRequest() {
+      if (!currentMidiPath) {
+        log("请先完成一次录制。");
+        return;
+      }
+      magicBtn.disabled = true;
+      magicBtn.textContent = "生成中...";
+      log("调用 DashScope 中...");
+      try {
+        const size = sizeSelect.value;
+        const resp = await fetch("/api/magic-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ midi_path: currentMidiPath, size }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "生成失败");
+        currentMagicPath = data.image_path;
+        magicImage.classList.remove("show");
+        magicImage.onload = () => {
+          visImage.style.opacity = 0;
+          requestAnimationFrame(() => magicImage.classList.add("show"));
+        };
+        magicImage.src = "/" + data.image_path + "?t=" + Date.now();
+        updateShareLinks().catch(() => {});
+        log("化乐为图完成");
+        advanceStage(3);
+      } catch (err) {
+        log("生成失败: " + err.message);
+      } finally {
+        magicBtn.disabled = false;
+        magicBtn.textContent = "化乐为图";
+        checkStageProgress();
+      }
+    }
+
+    connectBtn.onclick = connectMidi;
+    recordBtn.onclick = startRecording;
+    stopBtn.onclick = stopRecording;
+    magicBtn.onclick = magicImageRequest;
+    downloadMp3Btn.onclick = () => {};
+
+    function resizeCanvas() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+    tick();
+
+    async function updateShareLinks() {
+      const base = location.origin + "/";
+      const mp3Url = mp3ServerPath ? base + mp3ServerPath : null;
+      const timelineUrl = currentVisPath ? base + currentVisPath : null;
+      const finalUrl = currentMagicPath ? base + currentMagicPath : null;
+
+      dlMp3.disabled = !mp3Url;
+      dlTimeline.disabled = !timelineUrl;
+      dlFinal.disabled = !finalUrl;
+
+      if (mp3Url) dlMp3.onclick = () => window.open(mp3Url, "_blank");
+      if (timelineUrl) dlTimeline.onclick = () => window.open(timelineUrl, "_blank");
+      if (finalUrl) dlFinal.onclick = () => window.open(finalUrl, "_blank");
+
+      if (!mp3Url && !timelineUrl && !finalUrl) {
+        shareStatus.textContent = "等待生成后自动填充链接。";
+        qrBox.innerHTML = '<span style="color:var(--muted); font-size:12px;">二维码生成中...</span>';
+        return;
+      }
+
+      // Need all 3 assets to render the template share card.
+      if (mp3Url && timelineUrl && finalUrl) {
+        await renderShareCard();
+      }
+
+      if (!currentCardPath) {
+        shareStatus.textContent = "正在生成分享卡片...";
+        qrBox.innerHTML = '<span style="color:var(--muted); font-size:12px;">生成卡片中...</span>';
+        checkStageProgress();
+        return;
+      }
+
+      // QR on the web page: download the rendered share card image.
+      const cardUrl = base + currentCardPath;
+      shareStatus.textContent = "分享卡片已生成：扫码可下载图片。";
+      qrBox.innerHTML = "";
+      const ready = await ensureQrLib();
+      if (!ready || !window.QRCode) {
+        shareStatus.textContent = "二维码库加载失败，请检查网络";
+        qrBox.textContent = "二维码加载失败";
+        return;
+      }
+      try {
+        new QRCode(qrBox, {
+          text: cardUrl,
+          width: 170,
+          height: 170,
+          colorDark: "#0f1f3a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      } catch (err) {
+        shareStatus.textContent = "二维码生成异常";
+        qrBox.textContent = "二维码失败";
+      }
+      checkStageProgress();
+    }
+
+    function buildShareUrl() {
+      const mp3 = mp3ServerPath ? ("/" + mp3ServerPath) : "";
+      const timeline = currentVisPath ? ("/" + currentVisPath) : "";
+      const ai = currentMagicPath ? ("/" + currentMagicPath) : "";
+      const params = new URLSearchParams();
+      if (mp3) params.set("mp3", mp3);
+      if (timeline) params.set("timeline", timeline);
+      if (ai) params.set("ai", ai);
+      return `${location.origin}/share?${params.toString()}`;
+    }
+
+    async function generateQrDataUrl(text, size = 512) {
+      const ready = await ensureQrLib();
+      if (!ready || !window.QRCode) throw new Error("QRCode library not ready");
+      const tmp = document.createElement("div");
+      tmp.style.position = "fixed";
+      tmp.style.left = "-9999px";
+      tmp.style.top = "-9999px";
+      tmp.style.width = size + "px";
+      tmp.style.height = size + "px";
+      document.body.appendChild(tmp);
+      try {
+        tmp.innerHTML = "";
+        new QRCode(tmp, {
+          text,
+          width: size,
+          height: size,
+          colorDark: "#0f1f3a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+        await new Promise((r) => setTimeout(r, 0));
+        const img = tmp.querySelector("img");
+        if (img && img.src) return img.src;
+        const canvas = tmp.querySelector("canvas");
+        if (canvas && canvas.toDataURL) return canvas.toDataURL("image/png");
+        throw new Error("Failed to extract QR data URL");
+      } finally {
+        tmp.remove();
+      }
+    }
+
+    async function renderShareCard() {
+      if (currentCardPath) return;
+      if (!currentMagicPath) return;
+      if (!mp3ServerPath || !currentVisPath) return;
+
+      const shareUrl = buildShareUrl();
+      shareStatus.textContent = "生成分享卡片中...";
+      try {
+        const qrDataUrl = await generateQrDataUrl(shareUrl, 512);
+        const resp = await fetch("/api/render-share-card", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ai_path: currentMagicPath, qr_data_url: qrDataUrl }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "render-share-card failed");
+        currentCardPath = data.card_path;
+      } catch (err) {
+        log("分享卡片生成失败: " + err.message);
+        shareStatus.textContent = "分享卡片生成失败（请看日志）";
+      }
+    }
+
+    // If user wants to view original again, clicking visImage resets opacity
+    visImage.onclick = () => { visImage.style.opacity = 1; magicImage.classList.remove("show"); };
+
+    applyStageVisibility();
+    checkStageProgress();
+    log("就绪：连接 MIDI 后开始演奏吧。");
+  </script>
+</body>
+</html>

@@ -17,14 +17,17 @@ def get_api_key() -> str:
     if api_key:
         return api_key
 
-    if CONFIG_FILE.exists():
+    candidates = [CONFIG_FILE, Path(__file__).resolve().parent / CONFIG_FILE.name]
+    for candidate in candidates:
+        if not candidate.exists():
+            continue
         try:
-            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
-            key = data.get("api_key")
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+            key = (data.get("api_key") or "").strip()
             if key:
                 return key
         except Exception:
-            pass
+            continue
 
     raise RuntimeError(
         "DashScope API key not found. "
@@ -42,7 +45,10 @@ def read_prompt_from_txt(path: Path) -> str:
     return text
 
 
-def build_request_body(prompt: str, size: str = "1328*1328") -> dict:
+def build_request_body(prompt: str, size: str = "1472*1140") -> dict:
+    allowed_sizes = {"1664*928", "1472*1140", "1328*1328", "1140*1472", "928*1664"}
+    if size not in allowed_sizes:
+        raise ValueError(f"Unsupported size {size!r}. Allowed: {', '.join(sorted(allowed_sizes))}")
     return {
         "model": "qwen-image-plus",
         "input": {
@@ -114,8 +120,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("txt_path", help="Path to txt file containing the positive prompt.")
     parser.add_argument(
         "--size",
-        default="1328*1328",
-        help="Image size, e.g. 1328*1328, 1664*928, 928*1664, etc. (default: 1328*1328)",
+        default="1664*928",
+        help="Image size (default: 1664*928). Allowed: 1664*928, 1472*1140, 1328*1328, 1140*1472, 928*1664",
     )
     parser.add_argument(
         "--output-dir",

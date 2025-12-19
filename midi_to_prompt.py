@@ -199,6 +199,32 @@ def note_token_for_pitch_class(pc: str) -> str:
     return random.choice(pool)
 
 
+def sanitize_prompt(prompt: str) -> str:
+    """Sanitize prompt words that commonly trigger provider filters (e.g. superstition/violent terms)."""
+    import re
+
+    replacements = [
+        (r"\bghosts?\b", "echo"),
+        (r"\bspirit(s)?\b", "atmosphere"),
+        (r"\bhaunted\b", "atmospheric"),
+        (r"\bdemon(s)?\b", "shadow"),
+        (r"\bcurse(d)?\b", "mystery"),
+        (r"\bwhispers?\b", "soft hints"),
+        (r"\bstains?\b", "subtle marks"),
+        (r"\bblood\b", "crimson"),
+    ]
+
+    out = prompt
+    for pattern, repl in replacements:
+        out = re.sub(pattern, repl, out, flags=re.IGNORECASE)
+
+    # Keep it friendly for public demos
+    out = out.replace("divine,", "clean,")
+    out = out.replace("divine ", "clean ")
+    out = " ".join(out.split())
+    return out.strip()
+
+
 # -----------------------------
 # Global mood & style analysis
 # -----------------------------
@@ -414,13 +440,13 @@ def spans_to_prompt(spans: Iterable[NoteSpan], seed: int = None) -> str:
 
     # 更诗意的空间表达
     scene_roles = [
-        "like whispers in a half-remembered dream",
-        "as faint stains on old parchment",
+        "like ripples in a half-remembered memory",
+        "as faint marks on aged parchment",
         "hovering at the edge of perception",
         "dissolving into the atmosphere",
         "a distant echo of color",
         "traces left by something that has just departed",
-        "ghosts of forgotten moments",
+        "echoes of forgotten moments",
         "barely-there suggestions of form",
     ]
 
@@ -479,7 +505,7 @@ def spans_to_prompt(spans: Iterable[NoteSpan], seed: int = None) -> str:
         possible_scenes = [
             "the architecture of silence",
             "a map of faint tremors",
-            "the ghost of a gesture",
+            "the trace of a gesture",
             "residue of forgotten conversations",
         ]
     scene_type = random.choice(possible_scenes)
@@ -489,7 +515,7 @@ def spans_to_prompt(spans: Iterable[NoteSpan], seed: int = None) -> str:
         # 1. 印象派优化风格
         "optimized impressionist oil painting, soft broken brushstrokes, shimmering light, muted yet rich colors",
         # 2. 神性、纯净的摄影风格
-        "divine, pure photography style, soft natural light, high dynamic range, minimal noise, cinematic composition",
+        "clean, pure photography style, soft natural light, high dynamic range, minimal noise, cinematic composition",
         # 3. 梵高笔触风格
         "Van Gogh brushwork style, thick impasto strokes, swirling motion, vibrant contrasting colors",
         # 4. CG建模风格
@@ -514,7 +540,7 @@ def spans_to_prompt(spans: Iterable[NoteSpan], seed: int = None) -> str:
             "{motifs} emerge, then dissolve. \n"
             "The texture is {polyphony}, the breath is {rhythm}, \n"
             "the weight is {density}, the silence is {space}. \n"
-            "{style}, a whisper rendered visible."
+            "{style}, a quiet breath rendered visible."
         ),
         (
             "Imagine {scene_type}. \n"
@@ -564,6 +590,9 @@ def spans_to_prompt(spans: Iterable[NoteSpan], seed: int = None) -> str:
     if random.random() > 0.7:  # 30%的概率添加
         prompt = random.choice(openings) + prompt
 
+    prompt = sanitize_prompt(prompt)
+    # Add a consistent safety tail for public demo; keep it short.
+    prompt = f"{prompt} No text, no logos, no people."
     return prompt
 
 

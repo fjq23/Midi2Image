@@ -154,15 +154,26 @@ def spans_to_color_strip(
     return strip
 
 
-def color_strip_to_square_image(
+def color_strip_to_rect_image(
     strip: List[Tuple[int, int, int]],
+    ratio: Tuple[int, int] = (4, 3),
     noise: bool = True,
-) -> Union["Image.Image", Tuple[int, List[Tuple[int, int, int]]]]:
+) -> Union["Image.Image", Tuple[int, int, List[Tuple[int, int, int]]]]:
+    """Pack the long strip into a rectangle with a target aspect ratio (default 4:3)."""
     if not strip:
         raise ValueError("Color strip is empty")
 
-    side = int(math.ceil(math.sqrt(len(strip))))
-    needed = side * side - len(strip)
+    ratio_w, ratio_h = ratio
+    if ratio_w <= 0 or ratio_h <= 0:
+        raise ValueError("Aspect ratio must be positive")
+
+    # Compute minimal height/width that satisfy area and ratio
+    area = len(strip)
+    target_ratio = ratio_w / ratio_h
+    height = int(math.ceil(math.sqrt(area / target_ratio)))
+    width = int(math.ceil(height * target_ratio))
+    needed = width * height - area
+
     if needed > 0:
         if noise:
             for _ in range(needed):
@@ -171,12 +182,12 @@ def color_strip_to_square_image(
             strip.extend([(0, 0, 0)] * needed)
 
     if Image:
-        img = Image.new("RGB", (side, side))
-        img.putdata(strip[: side * side])
+        img = Image.new("RGB", (width, height))
+        img.putdata(strip[: width * height])
         return img
 
     # Pillow not available; return dimensions with raw data for manual saving
-    return side, strip[: side * side]
+    return width, height, strip[: width * height]
 
 
 def _write_png(path: str, width: int, height: int, data: List[Tuple[int, int, int]]) -> None:
@@ -210,13 +221,13 @@ def midi_to_image(
 ) -> str:
     spans = parse_midi_to_spans(midi_path)
     strip = spans_to_color_strip(spans, pixels_per_second=pixels_per_second)
-    image = color_strip_to_square_image(strip)
+    image = color_strip_to_rect_image(strip, ratio=(4, 3))
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     if Image and hasattr(image, "save"):
         image.save(output_path)
     else:
-        side, data = image  # type: ignore
-        _write_png(output_path, side, side, data)
+        width, height, data = image  # type: ignore
+        _write_png(output_path, width, height, data)
     return output_path
 
 
