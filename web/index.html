@@ -161,6 +161,10 @@
     .download-card { padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .download-card .meta { font-size: 14px; color: var(--muted); }
     .qr-box { width: 180px; height: 180px; border: 1px solid var(--border); border-radius: 14px; background: rgba(0,0,0,0.2); display: grid; place-items: center; }
+    .ticket { width: 100%; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,0.55); overflow: hidden; }
+    .ticket img { width: 100%; display: block; height: auto; }
+    .ticket.hidden { display: none; }
+    .ticket-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
 
     .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
     .gallery img { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); opacity: 0.85; transition: opacity 0.2s ease; }
@@ -258,7 +262,7 @@
 
     <section id="share" data-stage="3">
       <h2 class="section-title">3. 分享 · 扫码带走</h2>
-      <p class="section-sub">生成后，三件素材：MP3、时序图、AI 成图。扫码或点击下载，送你一张冬至纪念图。</p>
+      <p class="section-sub">生成后，三件素材：MP3、时序图、AI 成图。我们会自动合成一张“门票”分享图，扫码即可下载。</p>
       <div class="split">
         <div class="panel stack">
           <div class="download-grid">
@@ -269,8 +273,15 @@
           <div class="status" id="shareStatus">等待生成后自动填充链接。</div>
         </div>
         <div class="panel stack" style="align-items:center;">
+          <div class="ticket hidden" id="ticketBox">
+            <img id="ticketImg" alt="门票分享图" />
+          </div>
+          <div class="ticket-actions">
+            <button class="btn" id="openTicket" disabled>打开门票</button>
+            <button class="btn primary" id="downloadTicket" disabled>下载门票</button>
+          </div>
           <div class="qr-box" id="qrBox"><span style="color:var(--muted); font-size:12px;">二维码生成中...</span></div>
-          <div class="status" style="text-align:center;">扫码可下载 MP3 / 时序图 / 最终图</div>
+          <div class="status" style="text-align:center;">扫码可下载门票（包含 MP3 / 时序图 / AI 图入口）</div>
         </div>
       </div>
     </section>
@@ -288,6 +299,10 @@
     const magicImage = document.getElementById("magicImage");
     const shareStatus = document.getElementById("shareStatus");
     const qrBox = document.getElementById("qrBox");
+    const ticketBox = document.getElementById("ticketBox");
+    const ticketImg = document.getElementById("ticketImg");
+    const openTicket = document.getElementById("openTicket");
+    const downloadTicket = document.getElementById("downloadTicket");
 
     const connectBtn = document.getElementById("connectBtn");
     const recordBtn = document.getElementById("recordBtn");
@@ -764,6 +779,9 @@
       if (!mp3Url && !timelineUrl && !finalUrl) {
         shareStatus.textContent = "等待生成后自动填充链接。";
         qrBox.innerHTML = '<span style="color:var(--muted); font-size:12px;">二维码生成中...</span>';
+        ticketBox.classList.add("hidden");
+        openTicket.disabled = true;
+        downloadTicket.disabled = true;
         return;
       }
 
@@ -775,6 +793,9 @@
       if (!currentCardPath) {
         shareStatus.textContent = "正在生成分享卡片...";
         qrBox.innerHTML = '<span style="color:var(--muted); font-size:12px;">生成卡片中...</span>';
+        ticketBox.classList.add("hidden");
+        openTicket.disabled = true;
+        downloadTicket.disabled = true;
         checkStageProgress();
         return;
       }
@@ -782,6 +803,17 @@
       // QR on the web page: download the rendered share card image.
       const cardUrl = base + currentCardPath;
       shareStatus.textContent = "分享卡片已生成：扫码可下载图片。";
+      ticketBox.classList.remove("hidden");
+      ticketImg.src = "/" + currentCardPath + "?t=" + Date.now();
+      openTicket.disabled = false;
+      downloadTicket.disabled = false;
+      openTicket.onclick = () => window.open(cardUrl, "_blank");
+      downloadTicket.onclick = () => {
+        const a = document.createElement("a");
+        a.href = cardUrl;
+        a.download = "ticket.png";
+        a.click();
+      };
       qrBox.innerHTML = "";
       const ready = await ensureQrLib();
       if (!ready || !window.QRCode) {
