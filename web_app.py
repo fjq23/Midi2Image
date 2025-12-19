@@ -451,7 +451,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             return
 
         ai_box = (776, 38, 2773, 1577)
-        qr_box = (49, 1310, 723, 1961)
+        qr_box = (49, 1147, 720, 1798)
         resampling = getattr(Image, "Resampling", Image)
         paste_contain(base, ai_img, ai_box, resample=getattr(resampling, "LANCZOS", Image.LANCZOS))
         # QR: avoid non-integer scaling (hurts scanning). If it fits, paste 1:1 centered.
